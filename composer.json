@@ -1,9 +1,9 @@
 {
-    "name": "recaptcha/php5",
+    "name": "tyrola/recaptcha",
     "type": "library",
-    "description": "A properly coded PHP 5 reCaptcha class that will allow you to interact with Google's reCaptcha API.",
+    "description": "A properly coded PHP 5 reCaptcha class that will allow you to interact with Google's reCaptcha API v2.",
     "keywords": ["recaptcha", "api", "google", "captcha", "php"],
-    "homepage": "https://github.com/AlekseyKorzun/reCaptcha-PHP-5",
+    "homepage": "https://github.com/BirknerAlex/reCAPTCHA",
     "license": "BSD",
     "authors": [
         {
