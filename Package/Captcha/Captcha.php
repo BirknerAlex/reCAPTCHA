@@ -35,6 +35,7 @@ use Captcha\Exception;
  * Proper library for reCaptcha service
  *
  * @author Aleksey Korzun <aleksey@webfoundation.net>
+ * @author Alexander Birkner <alex.birkner@gmail.com>
  * @throws Exception
  * @package library
  */
@@ -97,10 +98,8 @@ class Captcha
      * @see https://developers.google.com/recaptcha/docs/customization
      */
     protected static $themes = array(
-        'red',
-        'white',
-        'blackglass',
-        'clean'
+        'dark',
+        'light'
     );
 
     /**
@@ -206,22 +205,13 @@ class Captcha
             throw new Exception('You must set public key provided by reCaptcha');
         }
 
-        $error = ($this->getError() ? '&amp;error=' . $this->getError() : null);
-
-        $theme = null;
-
-        // If user specified a reCaptcha theme, output it as one of the options
+        $theme = 'light';
         if ($this->theme) {
-            $theme = '<script> var RecaptchaOptions = {theme: "' . $this->theme . '"};</script>';
+            $theme = $this->theme;
         }
 
-        return $theme . '<script type="text/javascript" src="' . self::SERVER . '/challenge?k=' . $this->getPublicKey() . $error . '"></script>
-
-        <noscript>
-            <iframe src="' . self::SERVER . '/noscript?k=' . $this->getPublicKey() . $error . '" height="300" width="500" frameborder="0"></iframe><br/>
-            <textarea name="recaptcha_challenge_field" rows="3" cols="40"></textarea>
-            <input type="hidden" name="recaptcha_response_field" value="manual_challenge"/>
-        </noscript>';
+        return '<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        <div class="g-recaptcha" data-sitekey="'.$this->getPublicKey().'" data-theme="'.$theme.'""></div>';
     }
 
     /**
@@ -232,16 +222,15 @@ class Captcha
      * @throws Exception
      * @return Response
      */
-    public function check($captcha_challenge = false, $captcha_response = false)
+    public function check($captcha_response = false)
     {
         if (!$this->getPrivateKey()) {
             throw new Exception('You must set private key provided by reCaptcha');
         }
         // Skip processing of empty data
-        if (!$captcha_challenge && !$captcha_response) {
-            if (isset($_POST['recaptcha_challenge_field']) && isset($_POST['recaptcha_response_field'])) {
-                $captcha_challenge = $_POST['recaptcha_challenge_field'];
-                $captcha_response = $_POST['recaptcha_response_field'];
+        if (!$captcha_response) {
+            if (isset($_POST['g-recaptcha-response'])) {
+                $captcha_response = $_POST['g-recaptcha-response'];
             }
         }
 
@@ -249,7 +238,7 @@ class Captcha
         $response = new Response();
 
         // Discard SPAM submissions
-        if (strlen($captcha_challenge) == 0 || strlen($captcha_response) == 0) {
+        if (strlen($captcha_response) == 0) {
             $response->setValid(false);
             $response->setError('Incorrect-captcha-sol');
             return $response;
@@ -257,20 +246,19 @@ class Captcha
 
         $process = $this->process(
             array(
-                'privatekey' => $this->getPrivateKey(),
+                'secret' => $this->getPrivateKey(),
                 'remoteip' => $this->getRemoteIp(),
-                'challenge' => $captcha_challenge,
                 'response' => $captcha_response
             )
         );
 
-        $answers = explode("\n", $process [1]);
+        $answer = @json_decode($process, true);
 
-        if (trim($answers[0]) == 'true') {
+        if (is_array($answer) && isset($answer['success']) && $answer['success']) {
             $response->setValid(true);
         } else {
             $response->setValid(false);
-            $response->setError($answers[1]);
+            $response->setError(serialize($answer));
         }
 
         return $response;
@@ -288,29 +276,13 @@ class Captcha
         // Properly encode parameters
         $parameters = $this->encode($parameters);
 
-        $request  = "POST /recaptcha/api/verify HTTP/1.0\r\n";
-        $request .= "Host: " . self::VERIFY_SERVER . "\r\n";
-        $request .= "Content-Type: application/x-www-form-urlencoded;\r\n";
-        $request .= "Content-Length: " . strlen($parameters) . "\r\n";
-        $request .= "User-Agent: reCAPTCHA/PHP5\r\n";
-        $request .= "\r\n";
-        $request .= $parameters;
+        $response = @file_get_contents('https://' . self::VERIFY_SERVER . '/recaptcha/api/siteverify?' . $parameters);
 
-        if (false == ($socket = @fsockopen(self::VERIFY_SERVER, 80))) {
-            throw new Exception('Could not open socket to: ' . self::VERIFY_SERVER);
+        if (!$response) {
+            throw new Exception('Invalid request. Got: ' . serialize($response));
         }
 
-        fwrite($socket, $request);
-
-        $response = '';
-
-        while (!feof($socket) ) {
-            $response .= fgets($socket, 1160);
-        }
-
-        fclose($socket);
-
-        return explode("\r\n\r\n", $response, 2);
+        return $response;
     }
 
     /**
@@ -321,17 +293,7 @@ class Captcha
      */
     protected function encode(array $parameters)
     {
-        $uri = '';
-
-        if ($parameters) {
-            foreach ($parameters as $parameter => $value) {
-                $uri .= $parameter . '=' . urlencode(stripslashes($value)) . '&';
-            }
-        }
-
-        $uri = substr($uri, 0, strlen($uri)-1);
-
-        return $uri;
+        return http_build_query($parameters);
     }
 
     /**

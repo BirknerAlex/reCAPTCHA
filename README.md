@@ -2,7 +2,7 @@ reCaptcha-PHP-5 (v1.1.0)
 ==========================
 
 A properly coded PHP 5 reCaptcha class that will allow you to interact with Google's
-reCaptcha API.
+reCaptcha API v2.
 
 - 100% phpDocumentator 2 code coverage
 - 100% PSR-2 code coverage
