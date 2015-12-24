@@ -77,6 +77,13 @@ class Captcha
     protected $publicKey;
 
     /**
+     * Language of reCAPTCHA
+     *
+     * @var string
+     */
+    protected $language = 'en';
+
+    /**
      * Custom error message to return
      *
      * @var string
@@ -172,6 +179,26 @@ class Captcha
     }
 
     /**
+     * Set language
+     *
+     * @param  string $language
+     * @return string
+     */
+    public function setLanguage($language) {
+        $this->language = $language;
+        return $language;
+    }
+
+    /**
+     * Get language
+     *
+     * @return string
+     */
+    public function getLanguage() {
+        return $this->language;
+    }
+
+    /**
      * Set error string
      *
      * @param string $error
@@ -210,7 +237,7 @@ class Captcha
             $theme = $this->theme;
         }
 
-        return '<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        return '<script src="https://www.google.com/recaptcha/api.js?hl='.$this->getLanguage().'" async defer></script>
         <div class="g-recaptcha" data-sitekey="'.$this->getPublicKey().'" data-theme="'.$theme.'""></div>';
     }
 
@@ -325,4 +352,3 @@ class Captcha
         $this->theme = $theme;
     }
 }
-
