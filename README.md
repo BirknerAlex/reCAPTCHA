@@ -21,7 +21,7 @@ You can install via composer:
 ```
 {
   "require": {
-      "tyrola/recaptcha": "v2.0.0"
+      "tyrola/recaptcha": "v2.1.0"
   }
 }
 ```
